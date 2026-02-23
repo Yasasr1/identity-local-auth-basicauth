@@ -38,6 +38,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
 import org.wso2.carbon.identity.governance.IdentityGovernanceService;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.securevault.SecretResolver;
 import org.wso2.securevault.SecretResolverFactory;
@@ -183,6 +185,39 @@ public class BasicAuthenticatorServiceComponent {
     protected void unsetBrandingPreferenceManager(BrandingPreferenceManager brandingPreferenceManager) {
 
         BasicAuthenticatorDataHolder.getInstance().setBrandingPreferenceManager(null);
+    }
+
+    @Reference(
+            name = "organization.user.sharing.service",
+            service = OrganizationUserSharingService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationUserAssociationService")
+    protected void setOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
+
+        BasicAuthenticatorDataHolder.getInstance().setOrganizationUserSharingService(organizationUserSharingService);
+    }
+
+    protected void unsetOrganizationUserAssociationService(
+            OrganizationUserSharingService organizationUserSharingService) {
+
+        BasicAuthenticatorDataHolder.getInstance().setOrganizationUserSharingService(null);
+    }
+
+    @Reference(
+            name = "organization.management.service",
+            service = OrganizationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationManagementService")
+    protected void setOrganizationManagementService(OrganizationManager organizationManager) {
+
+        BasicAuthenticatorDataHolder.getInstance().setOrganizationManager(organizationManager);
+    }
+
+    protected void unsetOrganizationManagementService(OrganizationManager organizationManager) {
+
+        BasicAuthenticatorDataHolder.getInstance().setOrganizationManager(null);
     }
 
     /**

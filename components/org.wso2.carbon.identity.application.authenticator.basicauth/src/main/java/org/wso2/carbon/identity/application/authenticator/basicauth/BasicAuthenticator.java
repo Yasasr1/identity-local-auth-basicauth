@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.application.authentication.framework.context.Aut
 import org.wso2.carbon.identity.application.authentication.framework.exception.AuthenticationFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.InvalidCredentialsException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.LogoutFailedException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationFrameworkWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
@@ -68,6 +69,10 @@ import org.wso2.carbon.identity.flow.mgt.exception.FlowMgtServerException;
 import org.wso2.carbon.identity.flow.mgt.utils.FlowMgtConfigUtils;
 import org.wso2.carbon.identity.governance.IdentityGovernanceException;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.recovery.RecoveryScenarios;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -805,6 +810,8 @@ public class BasicAuthenticator extends AbstractApplicationAuthenticator
 
         boolean isAuthenticated = false;
         AbstractUserStoreManager userStoreManager = getUserStoreManager(username, requestTenantDomain);
+        userStoreManager = resolveUserStoreManagerForSharedUser(
+                tenantAwareUsername, requestTenantDomain, userStoreManager, context);
         // Reset RE_CAPTCHA_USER_DOMAIN thread local variable before the authentication
         IdentityUtil.threadLocalProperties.get().remove(RE_CAPTCHA_USER_DOMAIN);
         // Check the authentication
@@ -934,6 +941,7 @@ public class BasicAuthenticator extends AbstractApplicationAuthenticator
         authProperties.put("user-tenant-domain", requestTenantDomain);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser(authenticationResult.getAuthenticatedUser().get());
+        populateSharedUserAttributes(authenticatedUser, requestTenantDomain);
 
         // Update the username from the deprecated multi attribute login feature.
         updateMultiAttributeUsername(authenticatedUser, userStoreManager);
@@ -957,6 +965,32 @@ public class BasicAuthenticator extends AbstractApplicationAuthenticator
             getApplicationDetails(context, diagnosticLogBuilder);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
+    }
+
+    private void populateSharedUserAttributes(AuthenticatedUser authenticatedUser, String requestTenantDomain) {
+
+        OrganizationManager organizationManager = BasicAuthenticatorDataHolder.getInstance().getOrganizationManager();
+        OrganizationUserSharingService userSharingService = BasicAuthenticatorDataHolder.getInstance().getOrganizationUserSharingService();
+
+        String userTenantDomain = authenticatedUser.getTenantDomain();
+        try {
+            String userOrgId = organizationManager.resolveOrganizationId(userTenantDomain);
+            String requestOrgId = organizationManager.resolveOrganizationId(requestTenantDomain);
+            List<UserAssociation> userAssociations = userSharingService.getUserAssociationsOfGivenUser(authenticatedUser.getUserId(), userOrgId);
+            for (UserAssociation userAssociation : userAssociations ) {
+                if (StringUtils.equals(userAssociation.getOrganizationId(), requestOrgId)) {
+                    authenticatedUser.setResidentUserId(authenticatedUser.getUserId());
+                    authenticatedUser.setTenantDomain(requestTenantDomain);
+                    authenticatedUser.setUserId(userAssociation.getUserId());
+                    authenticatedUser.setSharedUser(true);
+                }
+            }
+        } catch (OrganizationManagementException e) {
+            log.error("Error while resolving organization id for tenant domain: " + userTenantDomain, e);
+        } catch (UserIdNotFoundException e) {
+            log.error("User id not found for user: " + authenticatedUser.getUserName(), e);
+        }
+
     }
 
     /**
@@ -1234,6 +1268,44 @@ public class BasicAuthenticator extends AbstractApplicationAuthenticator
         return multipleAttributeEnable;
     }
 
+    private AbstractUserStoreManager resolveUserStoreManagerForSharedUser(
+            String username, String tenantDomain, AbstractUserStoreManager userStoreManager,
+            AuthenticationContext context) {
+
+        OrganizationUserSharingService organizationUserSharingService =
+                BasicAuthenticatorDataHolder.getInstance().getOrganizationUserSharingService();
+        OrganizationManager organizationManager = BasicAuthenticatorDataHolder.getInstance().getOrganizationManager();
+        String orgId = null;
+        try {
+            orgId = organizationManager.resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            log.error("OrganizationManagementException occurred while retrieving organization id for the tenant: " +
+                    tenantDomain, e);
+        }
+
+        try {
+            String userId = userStoreManager.getUserIDFromUserName(username);
+            UserAssociation userAssociation =
+                    organizationUserSharingService.getUserAssociation(userId, orgId);
+            if (userAssociation != null &&
+                    !StringUtils.equals(userAssociation.getUserResidentOrganizationId(), orgId)) {
+                context.setProperty("isSharedUser", true);
+                return getUserStoreManager(username, organizationManager.resolveTenantDomain(
+                        userAssociation.getUserResidentOrganizationId()));
+            }
+        } catch (UserStoreException e) {
+            log.error("UserStoreException occurred while retrieving user id for the user: " + username, e);
+        } catch (OrganizationManagementException e) {
+            log.error("OrganizationManagementException occurred while retrieving user association for the user: " +
+                    username + " in the organization: " + orgId, e);
+        } catch (AuthenticationFailedException e) {
+            log.error("AuthenticationFailedException occurred while retrieving user store manager for the shared user: " +
+                    username, e);
+        }
+
+        return userStoreManager;
+    }
+
     private AbstractUserStoreManager getUserStoreManager(String username, String tenantDomain)
             throws AuthenticationFailedException {
 
@@ -1295,7 +1367,7 @@ public class BasicAuthenticator extends AbstractApplicationAuthenticator
 
         boolean isSaaSApp = context.getSequenceConfig().getApplicationConfig().isSaaSApp();
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && !isSaaSApp) {
-            return IdentityTenantUtil.getTenantDomainFromContext();
+            return context.getTenantDomain();
         }
         return MultitenantUtils.getTenantDomain(username);
     }

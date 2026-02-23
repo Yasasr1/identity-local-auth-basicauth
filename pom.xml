@@ -155,6 +155,11 @@
                 <artifactId>commons-lang</artifactId>
                 <version>${commons-lang.wso2.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.organization.management</groupId>
+                <artifactId>org.wso2.carbon.identity.organization.management.organization.user.sharing</artifactId>
+                <version>${org.mgt.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.wso2.orbit.com.nimbusds</groupId>
@@ -385,7 +390,7 @@
         <carbon.base.imp.pkg.version.range>[1.0.0, 2.0.0)</carbon.base.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>7.8.625</carbon.identity.framework.version>
+        <carbon.identity.framework.version>7.8.677</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.19.14, 8.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
@@ -399,6 +404,8 @@
         <osgi.framework.imp.pkg.version.range>[1.7.0, 2.0.0)</osgi.framework.imp.pkg.version.range>
         <osgi.service.component.imp.pkg.version.range>[1.2.0, 2.0.0)</osgi.service.component.imp.pkg.version.range>
         <imp.pkg.version.javax.servlet>[2.6.0, 3.0.0)</imp.pkg.version.javax.servlet>
+        <org.mgt.version>2.0.24</org.mgt.version>
+        <org.wso2.identity.organization.mgt.imp.pkg.version.range>[1.0.0,3.0.0)</org.wso2.identity.organization.mgt.imp.pkg.version.range>
 
         <!-- Commons version-->
         <commons-logging.osgi.version.range>[1.2,2.0)</commons-logging.osgi.version.range>
