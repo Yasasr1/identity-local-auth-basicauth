@@ -22,6 +22,8 @@ import org.wso2.carbon.identity.branding.preference.management.core.BrandingPref
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.governance.IdentityGovernanceService;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 
 import java.util.Properties;
 
@@ -37,6 +39,8 @@ public class BasicAuthenticatorDataHolder {
     private Properties recaptchaConfigs;
     private ConfigurationManager configurationManager = null;
     private BrandingPreferenceManager brandingPreferenceManager;
+    private OrganizationUserSharingService organizationUserSharingService;
+    private OrganizationManager organizationManager;
 
     private BasicAuthenticatorDataHolder() {
 
@@ -100,5 +104,45 @@ public class BasicAuthenticatorDataHolder {
     public void setBrandingPreferenceManager(BrandingPreferenceManager brandingPreferenceManager) {
 
         this.brandingPreferenceManager = brandingPreferenceManager;
+    }
+
+    /**
+     * Get the OrganizationUserSharingService service.
+     *
+     * @return OrganizationUserSharingService service.
+     */
+    public OrganizationUserSharingService getOrganizationUserSharingService() {
+
+        return organizationUserSharingService;
+    }
+
+    /**
+     * Set the OrganizationUserSharingService service.
+     *
+     * @param organizationUserSharingService The OrganizationUserSharingService service.
+     */
+    public void setOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
+
+        this.organizationUserSharingService = organizationUserSharingService;
+    }
+
+    /**
+     * Get the OrganizationManager service.
+     *
+     * @return OrganizationManager service.
+     */
+    public OrganizationManager getOrganizationManager() {
+
+        return organizationManager;
+    }
+
+    /**
+     * Set the OrganizationManager service.
+     *
+     * @param organizationManager The OrganizationManager service.
+     */
+    public void setOrganizationManager(OrganizationManager organizationManager) {
+
+        this.organizationManager = organizationManager;
     }
 }
