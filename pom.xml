@@ -207,6 +207,11 @@
                 <version>${org.wso2.carbon.identity.organization.management.core.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.wso2.carbon.identity.organization.management</groupId>
+                <artifactId>org.wso2.carbon.identity.organization.management.organization.user.sharing</artifactId>
+                <version>${org.wso2.carbon.identity.organization.management.user.sharing.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.jacoco</groupId>
                 <artifactId>org.jacoco.agent</artifactId>
                 <classifier>runtime</classifier>
@@ -421,6 +426,10 @@
         </org.wso2.carbon.identity.organization.management.core.version>
         <org.wso2.carbon.identity.organization.management.core.version.range>[1.0.0, 2.0.0)
         </org.wso2.carbon.identity.organization.management.core.version.range>
+        <org.wso2.carbon.identity.organization.management.user.sharing.version>2.0.24
+        </org.wso2.carbon.identity.organization.management.user.sharing.version>
+        <org.wso2.carbon.identity.organization.management.user.sharing.imp.pkg.version.range>[1.0.0, 3.0.0)
+        </org.wso2.carbon.identity.organization.management.user.sharing.imp.pkg.version.range>
     </properties>  
   
 </project>

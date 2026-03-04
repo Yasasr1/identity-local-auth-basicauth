@@ -30,6 +30,8 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticator;
 import org.wso2.carbon.identity.application.authentication.handler.identifier.IdentifierHandler;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.user.core.service.RealmService;
 
@@ -45,6 +47,8 @@ public class IdentifierAuthenticatorServiceComponent {
 
     private static MultiAttributeLoginService multiAttributeLogin;
     private static OrganizationUserResidentResolverService organizationUserResidentResolverService;
+    private static OrganizationUserSharingService organizationUserSharingService;
+    private static OrganizationManager organizationManager;
 
     public static RealmService getRealmService() {
 
@@ -143,5 +147,63 @@ public class IdentifierAuthenticatorServiceComponent {
             log.debug("Unset organization user resident resolver service.");
         }
         IdentifierAuthenticatorServiceComponent.organizationUserResidentResolverService = null;
+    }
+
+    public static OrganizationUserSharingService getOrganizationUserSharingService() {
+
+        return organizationUserSharingService;
+    }
+
+    @Reference(
+            name = "organization.user.sharing.service",
+            service = OrganizationUserSharingService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationUserSharingService"
+    )
+    protected void setOrganizationUserSharingService(
+            OrganizationUserSharingService organizationUserSharingService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the organization user sharing service.");
+        }
+        IdentifierAuthenticatorServiceComponent.organizationUserSharingService = organizationUserSharingService;
+    }
+
+    protected void unsetOrganizationUserSharingService(
+            OrganizationUserSharingService organizationUserSharingService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unset organization user sharing service.");
+        }
+        IdentifierAuthenticatorServiceComponent.organizationUserSharingService = null;
+    }
+
+    public static OrganizationManager getOrganizationManager() {
+
+        return organizationManager;
+    }
+
+    @Reference(
+            name = "organization.management.service",
+            service = OrganizationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationManagementService"
+    )
+    protected void setOrganizationManagementService(OrganizationManager organizationManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the organization management service.");
+        }
+        IdentifierAuthenticatorServiceComponent.organizationManager = organizationManager;
+    }
+
+    protected void unsetOrganizationManagementService(OrganizationManager organizationManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unset organization management service.");
+        }
+        IdentifierAuthenticatorServiceComponent.organizationManager = null;
     }
 }

@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.application.authenticator.basicauth.BasicAuthent
 import org.wso2.carbon.identity.application.authenticator.basicauth.util.AutoLoginConstant;
 import org.wso2.carbon.identity.application.authenticator.basicauth.util.BasicAuthErrorConstants.ErrorMessages;
 import org.wso2.carbon.identity.application.authenticator.basicauth.util.AutoLoginUtilities;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
@@ -53,6 +54,9 @@ import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -658,6 +662,7 @@ public class IdentifierHandler extends AbstractApplicationAuthenticator
         user.setUserName(tenantAwareUsername);
         user.setUserStoreDomain(userStoreDomain);
         user.setTenantDomain(tenantDomain);
+        populateSharedUserAttributes(user, tenantDomain);
         context.setSubject(user);
         if (LoggerUtils.isDiagnosticLogsEnabled() && authProcessCompletedDiagnosticLogBuilder != null) {
             authProcessCompletedDiagnosticLogBuilder.resultMessage("Identifier first authentication successful.")
@@ -696,6 +701,50 @@ public class IdentifierHandler extends AbstractApplicationAuthenticator
         }
         properties.put(IS_USER_RESOLVED, true);
         context.setProperties(properties);
+    }
+
+    /**
+     * Populates shared user attributes on the given {@link AuthenticatedUser} if the user is a shared user in the
+     * accessing organization. This method checks whether the authenticated user has an association to
+     * the accessing organization. If such an association exists, the user's
+     * accessing organization, resident organization, and shared user flag are set accordingly.
+     *
+     * @param authenticatedUser   The {@link AuthenticatedUser} whose shared user attributes need to be populated.
+     * @param requestTenantDomain The tenant domain of the organization in which authentication is being performed.
+     * @throws AuthenticationFailedException If an error occurs while resolving organization IDs or if the user ID
+     *                                       cannot be found for the authenticated user.
+     */
+    private void populateSharedUserAttributes(AuthenticatedUser authenticatedUser, String requestTenantDomain)
+            throws AuthenticationFailedException {
+
+        OrganizationManager organizationManager =
+                IdentifierAuthenticatorServiceComponent.getOrganizationManager();
+        OrganizationUserSharingService userSharingService =
+                IdentifierAuthenticatorServiceComponent.getOrganizationUserSharingService();
+
+        String userTenantDomain = authenticatedUser.getTenantDomain();
+        try {
+            String userOrgId = organizationManager.resolveOrganizationId(userTenantDomain);
+            String requestOrgId = organizationManager.resolveOrganizationId(requestTenantDomain);
+            UserAssociation userAssociation = userSharingService.getUserAssociationOfAssociatedUserByOrgId(
+                    authenticatedUser.getUserId(), requestOrgId);
+            if (userAssociation != null && StringUtils.equals(userAssociation.getOrganizationId(), requestOrgId)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Shared user association found for user: " + authenticatedUser.getUserName() +
+                            ". Setting accessing organization: " + requestOrgId +
+                            ", resident organization: " + userOrgId);
+                }
+                authenticatedUser.setAccessingOrganization(requestOrgId);
+                authenticatedUser.setUserResidentOrganization(userOrgId);
+                authenticatedUser.setSharedUser(true);
+            }
+        } catch (OrganizationManagementException e) {
+            throw new AuthenticationFailedException(
+                    "Error while resolving organization id for tenant domain: " + userTenantDomain, e);
+        } catch (UserIdNotFoundException e) {
+            throw new AuthenticationFailedException(
+                    "User id not found for user: " + authenticatedUser.getUserName(), e);
+        }
     }
 
     @Override
